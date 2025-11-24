@@ -30,11 +30,15 @@ function generateFromTemplate(data) {
   const zip = new PizZip(content);
 
   const doc = new Docxtemplater(zip, {
-    fileType: "pptx",
     delimiters: {
       start: "{{",
       end: "}}",
     },
+  });
+
+  // هنا التعديل المهم
+  doc.setOptions({
+    fileType: "pptx",
   });
 
   doc.setData(data);
