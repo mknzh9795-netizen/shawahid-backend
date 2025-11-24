@@ -29,18 +29,18 @@ function generateFromTemplate(data) {
 
   const zip = new PizZip(content);
 
+  // أهم شيء: مافي fileType ولا setOptions
   const doc = new Docxtemplater(zip, {
     delimiters: {
       start: "{{",
       end: "}}",
     },
+    // لو حاب تضيف خيارات ثانية زي:
+    // paragraphLoop: true,
+    // linebreaks: true,
   });
 
-  // هنا التعديل المهم
-  doc.setOptions({
-    fileType: "pptx",
-  });
-
+  // تقدر تبقيها كذا
   doc.setData(data);
 
   try {
