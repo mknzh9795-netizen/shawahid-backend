@@ -72,7 +72,27 @@ app.get("/", (req, res) => {
 
 // مسار توليد البوربوينت
 app.post("/generate-ppt", (req, res) => {
-  const data = req.body || {};
+const body = req.body || {};
+
+const data = {
+  id: body.id || "",
+  teacher_name: body.teacher_name || "",
+  birth: body.birth || "",
+  adress: body.adress || "",
+  phone: body.phone || "",
+  email: body.email || "",
+  date: body.date || "",
+  dgree: body.dgree || "",
+  branch: body.branch || "",
+  local: body.local || "",
+  moahel: body.moahel || "",
+  tahsel: body.tahsel || "",
+  one: body.one || "",
+  start: body.start || "",
+  step: body.step || "",
+  teacher: body.teacher || ""
+};
+
   console.log("📦 BODY:", data);
 
   try {
