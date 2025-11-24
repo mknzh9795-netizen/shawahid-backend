@@ -111,6 +111,17 @@ app.post("/generate-ppt", (req, res) => {
   }
 });
 
+app.get("/debug-template", (req, res) => {
+  const templatePath = path.join(__dirname, "templates", "template.pptx");
+  const exists = fs.existsSync(templatePath);
+
+  res.json({
+    templatePath,
+    exists,
+  });
+});
+
+
 app.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}`);
 });
