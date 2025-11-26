@@ -8,9 +8,11 @@
   "dependencies": {
     "cors": "^2.8.5",
     "docxtemplater": "^3.44.0",
+    "docxtemplater-image-module-free": "^1.1.1",
     "express": "^4.21.0",
     "googleapis": "^166.0.0",
     "morgan": "^1.10.0",
-    "pizzip": "^3.1.7"
+    "pizzip": "^3.1.7",
+    "qrcode": "^1.5.4"
   }
 }

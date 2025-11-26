@@ -95,11 +95,10 @@ async function createFolder(drive, name, parentId) {
 async function createTeacherFoldersForUser(teacherName) {
   const drive = getDriveForCurrentUser();
 
-  // المجلد الرئيسي بصيغة:
-  // شواهد الأداء الوظيفي أ. (خالد)
+  // 📁 المجلد الرئيسي بصيغة: شواهد الأداء الوظيفي أ. (اسم المعلم)
   const main = await createFolder(
     drive,
-`شواهد الأداء الوظيفي أ. (${teacherName})`
+    `شواهد الأداء الوظيفي أ. (${teacherName})`,
     null
   );
 
@@ -147,7 +146,7 @@ function createImageModule() {
 
 // ========= دوال التوليد من القالب =========
 
-// نسخة قديمة (بدون QR) – لو حاب تستخدمها لمسارات أخرى
+// نسخة أساسية (بدون QR) – احتياط
 function generateFromTemplate(data) {
   const templatePath = path.join(__dirname, "templates", "template.pptx");
   console.log("📁 Using template:", templatePath);
@@ -193,7 +192,7 @@ function generateFromTemplate(data) {
   return buf;
 }
 
-// نسخة جديدة تدعم حقن صور QR داخل القالب
+// نسخة تدعم حقن صور QR داخل القالب
 function generateFromTemplateWithQr(data) {
   const templatePath = path.join(__dirname, "templates", "template.pptx");
   console.log("📁 Using template (QR):", templatePath);
