@@ -9,6 +9,7 @@
     "cors": "^2.8.5",
     "docxtemplater": "^3.44.0",
     "express": "^4.21.0",
+    "googleapis": "^166.0.0",
     "morgan": "^1.10.0",
     "pizzip": "^3.1.7"
   }
