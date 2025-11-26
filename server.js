@@ -149,3 +149,66 @@ app.get("/debug-template", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}`);
 });
+
+// ====== Google OAuth2 setup ======
+const { google } = require("googleapis");
+
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+
+const oauth2Client = new google.auth.OAuth2(
+  CLIENT_ID,
+  CLIENT_SECRET,
+  REDIRECT_URI
+);
+
+// تخزين مؤقت للتوكنات أثناء التجربة
+let cachedTokens = null;
+
+// بدء تسجيل الدخول عن طريق جوجل
+app.get("/auth/google", (req, res) => {
+  const scopes = [
+    "https://www.googleapis.com/auth/drive.file",
+  ];
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    scope: scopes,
+  });
+
+  res.redirect(url);
+});
+
+// استقبال Google Callback
+app.get("/oauth2callback", async (req, res) => {
+  const code = req.query.code;
+
+  if (!code) {
+    return res.status(400).send("missing code");
+  }
+
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    cachedTokens = tokens;
+
+    console.log("🔥 Google Tokens:", tokens);
+
+    res.send(`
+      <h2 style="font-family: sans-serif; direction: rtl; text-align: center; margin-top:40px;">
+        🎉 تم ربط حساب Google بنجاح  
+      </h2>
+      <p style="text-align:center; direction:rtl">تقدر تقفل الصفحة الآن وترجع لنظام الشواهد.</p>
+    `);
+
+  } catch (err) {
+    console.error("❌ Error exchanging code:", err);
+    res.status(500).send("Authentication error with Google");
+  }
+});
+
+// لمعرفة هل فيه مستخدم مربوط الآن
+app.get("/debug/google-tokens", (req, res) => {
+  res.json(cachedTokens || { message: "No tokens yet" });
+});
