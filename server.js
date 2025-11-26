@@ -1,3 +1,5 @@
+// server.js
+
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -5,16 +7,99 @@ const fs = require("fs");
 const path = require("path");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
+const { google } = require("googleapis"); // Google APIs
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares
+// ========= Middlewares =========
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 app.use(morgan("dev"));
 
-// دالة توليد البوربوينت من القالب
+// ========= Google OAuth2 setup =========
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+
+const oauth2Client = new google.auth.OAuth2(
+  CLIENT_ID,
+  CLIENT_SECRET,
+  REDIRECT_URI
+);
+
+// للتجربة فقط: نخزن التوكن في الذاكرة
+let cachedTokens = null;
+
+// بدء المصادقة مع جوجل
+app.get("/auth/google", (req, res) => {
+  console.log("GOOGLE_CLIENT_ID =", CLIENT_ID);
+  console.log("GOOGLE_REDIRECT_URI =", REDIRECT_URI);
+
+  const scopes = ["https://www.googleapis.com/auth/drive.file"];
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    scope: scopes,
+    redirect_uri: REDIRECT_URI,
+  });
+
+  console.log("Generated auth URL:", url);
+  res.redirect(url);
+});
+
+// استلام الكود من جوجل
+app.get("/oauth2callback", async (req, res) => {
+  const code = req.query.code;
+  console.log("Callback code =", code);
+
+  if (!code) {
+    return res.status(400).send("missing code");
+  }
+
+  try {
+    const { tokens } = await oauth2Client.getToken({
+      code,
+      redirect_uri: REDIRECT_URI,
+    });
+
+    cachedTokens = tokens;
+
+    console.log("✅ Google tokens saved:", tokens);
+
+    res.send(`
+      <html lang="ar" dir="rtl">
+      <head><meta charset="utf-8"><title>تم الربط</title></head>
+      <body style="font-family: system-ui; text-align: center; padding-top:40px;">
+        <h2>✅ تم ربط حساب Google بنجاح</h2>
+        <p>يمكنك إغلاق هذه الصفحة والعودة لنظام الشواهد.</p>
+      </body>
+      </html>
+    `);
+  } catch (err) {
+    console.error("❌ Error exchanging code:", err);
+    res.status(500).send("Authentication error with Google");
+  }
+});
+
+// فحص التوكنات
+app.get("/debug/google-tokens", (req, res) => {
+  if (!cachedTokens) {
+    return res.json({ connected: false, message: "لا يوجد مستخدم مربوط بعد" });
+  }
+
+  res.json({
+    connected: true,
+    tokens: {
+      access_token: cachedTokens.access_token,
+      refresh_token: cachedTokens.refresh_token,
+      expiry_date: cachedTokens.expiry_date,
+    },
+  });
+});
+
+// ========= دالة توليد البوربوينت من القالب =========
 function generateFromTemplate(data) {
   const templatePath = path.join(__dirname, "templates", "template.pptx");
   console.log("📁 Using template:", templatePath);
@@ -29,18 +114,13 @@ function generateFromTemplate(data) {
 
   const zip = new PizZip(content);
 
-  // أهم شيء: مافي fileType ولا setOptions
   const doc = new Docxtemplater(zip, {
     delimiters: {
       start: "{{",
       end: "}}",
     },
-    // لو حاب تضيف خيارات ثانية زي:
-    // paragraphLoop: true,
-    // linebreaks: true,
   });
 
-  // تقدر تبقيها كذا
   doc.setData(data);
 
   try {
@@ -65,34 +145,16 @@ function generateFromTemplate(data) {
   return buf;
 }
 
-// فحص سريع إن السيرفر شغال
+// ========= Routes عادية =========
+
+// فحص سريع أن السيرفر شغال
 app.get("/", (req, res) => {
   res.send("✅ shawahid-backend is running");
 });
 
-// مسار توليد البوربوينت
+// توليد البوربوينت من القالب الأساسي
 app.post("/generate-ppt", (req, res) => {
-const body = req.body || {};
-
-const data = {
-  id: body.id || "",
-  teacher_name: body.teacher_name || "",
-  birth: body.birth || "",
-  adress: body.adress || "",
-  phone: body.phone || "",
-  email: body.email || "",
-  date: body.date || "",
-  dgree: body.dgree || "",
-  branch: body.branch || "",
-  local: body.local || "",
-  moahel: body.moahel || "",
-  tahsel: body.tahsel || "",
-  one: body.one || "",
-  start: body.start || "",
-  step: body.step || "",
-  teacher: body.teacher || ""
-};
-
+  const data = req.body || {};
   console.log("📦 BODY:", data);
 
   try {
@@ -135,6 +197,7 @@ const data = {
   }
 });
 
+// فحص القالب
 app.get("/debug-template", (req, res) => {
   const templatePath = path.join(__dirname, "templates", "template.pptx");
   const exists = fs.existsSync(templatePath);
@@ -145,67 +208,7 @@ app.get("/debug-template", (req, res) => {
   });
 });
 
-
+// ========= Start server =========
 app.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}`);
-});
-
-// ====== Google OAuth2 setup ======
-const { google } = require("googleapis");
-
-const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
-
-const oauth2Client = new google.auth.OAuth2(
-  CLIENT_ID,
-  CLIENT_SECRET,
-  REDIRECT_URI
-);
-
-// تخزين مؤقت للتوكنات أثناء التجربة
-let cachedTokens = null;
-
-// بدء تسجيل الدخول عن طريق جوجل
-app.get("/auth/google", (req, res) => {
-  console.log("GOOGLE_CLIENT_ID =", CLIENT_ID);
-  console.log("GOOGLE_REDIRECT_URI =", REDIRECT_URI);
-
-  const scopes = [
-    "https://www.googleapis.com/auth/drive.file",
-  ];
-
-  const url = oauth2Client.generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent",
-    scope: scopes,
-    redirect_uri: REDIRECT_URI, // مهم
-  });
-
-  console.log("Generated auth URL:", url);
-
-  res.redirect(url);
-});
-
-
-// استقبال Google Callback
-app.get("/oauth2callback", async (req, res) => {
-  const code = req.query.code;
-  console.log("Callback code =", code);
-
-  if (!code) {
-    return res.status(400).send("missing code");
-  }
-
-  try {
-    const { tokens } = await oauth2Client.getToken({
-      code,
-      redirect_uri: REDIRECT_URI,
-    });
-
-
-
-// لمعرفة هل فيه مستخدم مربوط الآن
-app.get("/debug/google-tokens", (req, res) => {
-  res.json(cachedTokens || { message: "No tokens yet" });
 });
