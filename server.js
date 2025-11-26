@@ -168,6 +168,9 @@ let cachedTokens = null;
 
 // بدء تسجيل الدخول عن طريق جوجل
 app.get("/auth/google", (req, res) => {
+  console.log("GOOGLE_CLIENT_ID =", CLIENT_ID);
+  console.log("GOOGLE_REDIRECT_URI =", REDIRECT_URI);
+
   const scopes = [
     "https://www.googleapis.com/auth/drive.file",
   ];
@@ -176,37 +179,31 @@ app.get("/auth/google", (req, res) => {
     access_type: "offline",
     prompt: "consent",
     scope: scopes,
+    redirect_uri: REDIRECT_URI, // مهم
   });
+
+  console.log("Generated auth URL:", url);
 
   res.redirect(url);
 });
 
+
 // استقبال Google Callback
 app.get("/oauth2callback", async (req, res) => {
   const code = req.query.code;
+  console.log("Callback code =", code);
 
   if (!code) {
     return res.status(400).send("missing code");
   }
 
   try {
-    const { tokens } = await oauth2Client.getToken(code);
-    cachedTokens = tokens;
+    const { tokens } = await oauth2Client.getToken({
+      code,
+      redirect_uri: REDIRECT_URI,
+    });
+    ...
 
-    console.log("🔥 Google Tokens:", tokens);
-
-    res.send(`
-      <h2 style="font-family: sans-serif; direction: rtl; text-align: center; margin-top:40px;">
-        🎉 تم ربط حساب Google بنجاح  
-      </h2>
-      <p style="text-align:center; direction:rtl">تقدر تقفل الصفحة الآن وترجع لنظام الشواهد.</p>
-    `);
-
-  } catch (err) {
-    console.error("❌ Error exchanging code:", err);
-    res.status(500).send("Authentication error with Google");
-  }
-});
 
 // لمعرفة هل فيه مستخدم مربوط الآن
 app.get("/debug/google-tokens", (req, res) => {
